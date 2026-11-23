@@ -27,7 +27,37 @@ small,.muted{color:#64748b}.tip{margin:12px 0 0;color:#697586;font-size:12px;lin
 .date-part .line{display:inline-block;box-sizing:border-box;text-align:center;min-width:0}
 .date-day .line{width:10mm}.date-month .line{width:24mm}.date-year .line{width:14mm}
 .money-words-row{display:flex;align-items:baseline;gap:5px;min-height:8mm;white-space:nowrap}.money-words-row .line{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}.money-words-label{font-size:14px}.receiver-row{display:flex;justify-content:flex-end;min-height:8mm}.receiver-row .receiver{min-width:26mm}.receipt-main .rline{min-height:8mm}.receipt-main .date-row{margin-bottom:2mm}
-@media print{@page{size:A4 portrait;margin:12mm 12mm}html,body{background:#fff!important;margin:0!important;padding:0!important}header,.editor,.preview-toolbar,.records,.tip,.screen-only{display:none!important}main,.panel,.preview-area,.print-stack{display:block!important;width:auto!important;max-width:none!important;margin:0!important;padding:0!important;border:0!important;background:#fff!important;box-shadow:none!important;overflow:visible!important}.receipt{width:175mm!important;height:88mm;page-break-inside:avoid;break-inside:avoid;border:1px solid var(--receipt-border,#cc9eae);print-color-adjust:exact;-webkit-print-color-adjust:exact;margin:0 auto 5mm!important}.receipt:not(.print-selected){display:none!important}.stamp{display:block!important}.editor,.records{display:none!important}body{font-size:12pt}}
+/* Print only: reserve a physical safe area before the first receipt. */
+@media print {
+  @page { size: A4 portrait; margin: 12mm 12mm; }
+  html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+  header, .editor, .preview-toolbar, .records, .tip, .screen-only { display: none !important; }
+  main, .panel, .preview-area {
+    display: block !important; width: 100% !important; max-width: none !important;
+    margin: 0 !important; padding: 0 !important; border: 0 !important;
+    background: #fff !important; box-shadow: none !important;
+    overflow: visible !important;
+  }
+  .print-stack {
+    display: flex !important; flex-direction: column !important;
+    align-items: center !important; justify-content: flex-start !important;
+    gap: 5mm !important; min-width: 0 !important; width: 100% !important;
+    margin: 0 !important; padding: 8mm 0 0 !important;
+    border: 0 !important; overflow: visible !important;
+  }
+  .receipt {
+    width: 175mm !important; height: 88mm !important; max-width: 175mm !important;
+    flex: none !important; margin: 0 !important;
+    box-sizing: border-box !important; break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    border: 1px solid var(--receipt-border,#cc9eae);
+    print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important;
+  }
+  .receipt:not(.print-selected) { display: none !important; }
+  .stamp { display: block !important; }
+  body { font-size: 12pt; }
+}
+
 </style>
 </head>
 <body>
@@ -60,7 +90,7 @@ function safe(str){return String(str??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<
 function thaiNumber(n){const digits=['ศูนย์','หนึ่ง','สอง','สาม','สี่','ห้า','หก','เจ็ด','แปด','เก้า'];let s=String(n);if(s==='0')return 'ศูนย์';function belowMillion(t){let res='';const units=['','สิบ','ร้อย','พัน','หมื่น','แสน'];const L=t.length;for(let i=0;i<L;i++){const d=Number(t[i]),p=L-i-1;if(!d)continue;if(p===1){if(d===1)res+='สิบ';else if(d===2)res+='ยี่สิบ';else res+=digits[d]+'สิบ'}else if(p===0&&d===1&&L>1&&Number(t.slice(0,-1))>0)res+='เอ็ด';else res+=digits[d]+units[p]}return res}function inner(t){if(t.length<=6)return belowMillion(t);const hi=t.slice(0,-6),lo=t.slice(-6);return inner(hi)+'ล้าน'+(Number(lo)?belowMillion(lo):'')}return inner(s)}
 function bahtWords(value){let n=Number(value);if(!Number.isFinite(n)||n<0)return '';const cents=Math.round(n*100);const baht=Math.floor(cents/100),satang=cents%100;return thaiNumber(baht)+'บาท'+(satang?thaiNumber(satang)+'สตางค์':'ถ้วน')}
 function formatDate(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s||''))return ['', '', ''];const [y,m,d]=s.split('-').map(Number);return [String(d),months[m-1]||'',String(y+543)]}
-function currency(n){return Number(n||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function currency(n){return Number(n||0).toLocaleString('th-TH',{minimumFractionDigits:0,maximumFractionDigits:2})}
 function getForm(){return {book:$('book').value.trim(),number:displayNumber($('number').value),issueDate:$('issueDate').value,payer:$('payer').value.trim(),house:$('house').value.trim(),rentMonth:$('rentMonth').value,rentYear:$('rentYear').value,amount:$('amount').value,collector:$('collector').value.trim(),receiptColor:$('receiptColor').value}}
 function line(value,extra=''){return `<span class="line ${extra}">${safe(value||' ')}</span>`}
 function renderReceipt(data,kind){const [day,month,year]=formatDate(data.issueDate);const label=kind==='original'?'':'สำเนา';return `${label?`<span class="stamp">${label}</span>`:''}<div class="receipt-header"><div class="serial">เล่มที่ ${line(data.book,'short')}</div><h2 class="receipt-title">ใบเสร็จรับเงินค่าเช่า</h2><div class="serial">เลขที่ ${line(displayNumber(data.number),'short')}</div></div><div class="receipt-main"><div class="date-row"><span class="date-part date-day">วันที่ ${line(day)}</span><span class="date-part date-month">เดือน ${line(month)}</span><span class="date-part date-year">พ.ศ.${line(year)}</span></div><div class="rline">ได้รับเงินจาก ${line(data.payer)}</div><div class="rline">บ้านเลขที่ ${line(data.house)}</div><div class="rline rent-period-row"><span>ชำระค่าเช่าประจำเดือน</span><span class="rent-month">${line(data.rentMonth)}</span><span class="rent-year">พ.ศ.${line(data.rentYear)}</span></div><div class="rline">เป็นจำนวนเงิน ${line(data.amount!==''?currency(data.amount):'')}</div><div class="money-words-row"><span class="money-words-label">บาท</span>${line(data.amount!==''?bahtWords(data.amount):'')}</div><div class="receiver-row"><div class="receiver">${line(data.collector)}<div class="caption">ผู้รับเงิน</div></div></div></div>`}
